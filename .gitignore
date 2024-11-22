@@ -1,0 +1,4 @@
+/node_modules
+migrations
+config.json
+models/index.js
