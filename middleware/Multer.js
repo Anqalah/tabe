@@ -36,7 +36,7 @@ const checkFileDuplicate = (req, file, cb) => {
   });
 };
 
-export const upload = multer({
+export const multer = multer({
   storage: storage,
   fileFilter: checkFileDuplicate, // Menggunakan middleware untuk memeriksa duplikasi
 });
