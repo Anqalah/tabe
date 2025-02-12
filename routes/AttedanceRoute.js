@@ -1,8 +1,13 @@
 import express from "express";
 import { upload } from "../middleware/multer.js"; // Sesuaikan dengan lokasi file upload
-import { clockIn, clockOut } from "../controllers/Attedances.js";
+import {
+  clockIn,
+  clockOut,
+  clockInResults,
+} from "../controllers/Attedances.js";
 const router = express.Router();
 
+router.get("/attendances/clockin-result/:id", clockInResults);
 router.post(
   "/attendances/clockin/:id",
   upload.single("facePhotoClockIn"),

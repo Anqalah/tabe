@@ -26,9 +26,6 @@
       locationClockIn: {
         type: DataTypes.STRING,
       },
-      locationClockOut: {
-        type: DataTypes.STRING,
-      },
       facePhotoClockIn: {
         type: DataTypes.STRING,
       },
