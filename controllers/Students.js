@@ -59,40 +59,46 @@ export const getStudentById = async (req, res) => {
   }
 };
 
-export const createStudent = async (req, res) => {
-  const {
-    name,
-    jk,
-    umur,
-    alamat,
-    hp,
-    bidang,
-    kelas,
-    email,
-    password,
-    confPassword,
-  } = req.body;
-  if (password !== confPassword)
-    return res
-      .status(400)
-      .json({ msg: "Password dan Confirm Password Harus Sama" });
-  const hashPassword = await argon2.hash(password);
+export const AddStudent = async (req, res) => {
   try {
-    await Students.create({
-      name: name,
-      jk: jk,
-      umur: umur,
-      alamat: alamat,
-      hp: hp,
-      bidang: bidang,
-      kelas: kelas,
-      email: email,
-      password: hashPassword,
-      role: "Student",
+    const { name, kelas, jk, hp, bidang, email, password, confPassword } =
+      req.body;
+
+    // Check password matching
+    if (password !== confPassword) {
+      return res.status(400).json({ error: "Password tidak cocok" });
+    }
+
+    // Check if email already registered
+    const existing = await Students.findOne({
+      where: { email },
     });
-    res.status(201).json({ msg: "Register Berhasil" });
+    if (existing) {
+      return res.status(400).json({ error: "Email sudah terdaftar" });
+    }
+
+    // Create student
+    const student = await Students.create({
+      name,
+      kelas,
+      jk,
+      hp,
+      bidang,
+      email,
+      password: hashPassword,
+    });
+
+    res.json({
+      success: true,
+      data: {
+        id: student.id,
+        name: student.name,
+        email: student.email,
+      },
+    });
   } catch (error) {
-    res.status(400).json({ msg: error.message });
+    console.error("Create student error:", error);
+    res.status(500).json({ error: "Gagal menyelesaikan registrasi" });
   }
 };
 

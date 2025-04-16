@@ -21,24 +21,12 @@ const Students = db.define(
         notEmpty: true,
       },
     },
-    jk: {
-      type: DataTypes.STRING,
-    },
-    umur: {
-      type: DataTypes.STRING,
-    },
-    alamat: {
-      type: DataTypes.STRING,
-    },
-    hp: {
-      type: DataTypes.STRING,
-    },
-    bidang: {
-      type: DataTypes.STRING,
-    },
-    kelas: {
-      type: DataTypes.STRING,
-    },
+    jk: DataTypes.STRING,
+    umur: DataTypes.STRING,
+    alamat: DataTypes.STRING,
+    hp: DataTypes.STRING,
+    bidang: DataTypes.STRING,
+    kelas: DataTypes.STRING,
     email: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -61,7 +49,10 @@ const Students = db.define(
         notEmpty: true,
       },
     },
-    foto: {
+    foto_profile: {
+      type: DataTypes.STRING,
+    },
+    face_image: {
       type: DataTypes.STRING,
     },
   },

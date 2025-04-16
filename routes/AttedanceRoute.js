@@ -1,5 +1,5 @@
 import express from "express";
-import { multer } from "../middleware/multer.js"; // Sesuaikan dengan lokasi file multer
+import { faceUpload } from "../middleware/Multer.js"; // Sesuaikan dengan lokasi file upload
 import {
   clockIn,
   clockOut,
@@ -10,12 +10,12 @@ const router = express.Router();
 router.get("/attendances/clockin-result/:id", clockInResults);
 router.post(
   "/attendances/clockin/:id",
-  multer.single("facePhotoClockIn"),
+  faceUpload.single("facePhotoClockIn"),
   clockIn
 );
 router.post(
   "/attendances/clockout/:id",
-  multer.single("facePhotoClockOut"),
+  faceUpload.single("facePhotoClockOut"),
   clockOut
 );
 

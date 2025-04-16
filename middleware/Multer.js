@@ -2,41 +2,66 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 
-// Konfigurasi multer untuk menyimpan file secara lokal
-const storage = multer.diskStorage({
+// Helper untuk membuat direktori jika belum ada
+const ensureDir = (dir) => {
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+};
+
+// ===== Konfigurasi untuk Upload Gambar Wajah =====
+const faceStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const dir = "./assets/attendances/";
-    // Buat folder jika belum ada
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
+    const dir = "./assets/face_images/";
+    ensureDir(dir);
     cb(null, dir);
   },
   filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + "-" + file.originalname);
+    const userId = req.user?.id || "unknown";
+    const ext = path.extname(file.originalname);
+    const uniqueName = `face-${userId}-${Date.now()}-${Math.random()
+      .toString(36)
+      .substring(2)}${ext}`;
+    cb(null, uniqueName);
   },
 });
 
-// Middleware untuk memeriksa duplikasi file
+const imageFilter = (req, file, cb) => {
+  file.mimetype.startsWith("image/")
+    ? cb(null, true)
+    : cb(new Error("Hanya file gambar yang diperbolehkan"), false);
+};
+
+export const faceUpload = multer({
+  storage: faceStorage,
+  fileFilter: imageFilter,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+});
+
+// ===== Konfigurasi untuk Upload Presensi =====
+const attendanceStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = "./assets/attendances/";
+    ensureDir(dir);
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueName = `${Date.now()}-${Math.random()
+      .toString(36)
+      .substring(2)}-${file.originalname}`;
+    cb(null, uniqueName);
+  },
+});
+
 const checkFileDuplicate = (req, file, cb) => {
   const filePath = path.join("assets/attendances", file.originalname);
-  // Cek jika file sudah ada
   fs.access(filePath, fs.constants.F_OK, (err) => {
-    if (err) {
-      // File tidak ada, lanjutkan dengan upload
-      cb(null, true);
-    } else {
-      // File sudah ada, tolak upload
-      cb(
-        new Error("File sudah ada, silakan gunakan nama yang berbeda."),
-        false
-      );
-    }
+    cb(
+      err ? null : new Error("File sudah ada, gunakan nama berbeda."),
+      err ? true : false
+    );
   });
 };
 
-export const multer = multer({
-  storage: storage,
-  fileFilter: checkFileDuplicate, // Menggunakan middleware untuk memeriksa duplikasi
+export const attendanceUpload = multer({
+  storage: attendanceStorage,
+  fileFilter: checkFileDuplicate,
 });
