@@ -141,6 +141,7 @@ export const registerInitial = async (req, res) => {
       hp,
       bidang,
       kelas,
+      role: "Students",
       password: hashPassword,
       verification_token: verificationToken,
       expires_at: expiresAt,
