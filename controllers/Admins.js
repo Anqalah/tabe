@@ -26,22 +26,75 @@ export const getAdminById = async (req, res) => {
 
 export const createAdmin = async (req, res) => {
   const { name, email, password, confPassword, hp } = req.body;
-  if (password !== confPassword)
-    return res
-      .status(400)
-      .json({ msg: "Password dan Confirm Password Harus Sama" });
-  const hashPassword = await argon2.hash(password);
+
+  // 1. Validasi input lebih ketat
+  if (!name || !email || !password || !confPassword || !hp) {
+    return res.status(400).json({
+      status: "error",
+      message: "Semua field harus diisi",
+    });
+  }
+
+  if (password !== confPassword) {
+    return res.status(400).json({
+      status: "error",
+      message: "Password dan konfirmasi password tidak sama",
+    });
+  }
+
   try {
-    await Admins.create({
-      name: name,
-      email: email,
-      hp: hp,
+    // 2. Cek apakah email sudah terdaftar
+    const existingAdmin = await Admins.findOne({ where: { email } });
+    if (existingAdmin) {
+      return res.status(409).json({
+        status: "error",
+        message: "Email sudah terdaftar",
+      });
+    }
+
+    // 3. Hash password
+    const hashPassword = await argon2.hash(password);
+
+    // 4. Timeout handling
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => {
+        reject(new Error("Request timeout"));
+      }, 10000); // Timeout 10 detik
+    });
+
+    const createAdminPromise = Admins.create({
+      name,
+      email,
+      hp,
       password: hashPassword,
       role: "Admin",
     });
-    res.status(201).json({ msg: "Register Berhasil" });
+
+    // 5. Gunakan Promise.race untuk handle timeout
+    await Promise.race([createAdminPromise, timeoutPromise]);
+
+    res.status(201).json({
+      status: "success",
+      message: "Admin berhasil dibuat",
+    });
   } catch (error) {
-    res.status(400).json({ msg: error.message });
+    console.error("Error creating admin:", error);
+
+    // 6. Handle error khusus
+    if (error.message === "Request timeout") {
+      return res.status(504).json({
+        status: "error",
+        code: 504,
+        message: "Server timeout, silakan coba lagi",
+      });
+    }
+
+    res.status(500).json({
+      status: "error",
+      code: 500,
+      message: "Terjadi kesalahan server",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
   }
 };
 
