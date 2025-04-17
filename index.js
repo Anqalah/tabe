@@ -15,30 +15,55 @@ dotenv.config();
 const app = express();
 
 const sessionStore = SequelizeStore(session.Store);
-
 const store = new sessionStore({ db: db });
 await db.authenticate();
-// await Attendances.drop();
-// await A.sync({ force: true });
-// await PendingRegistration.sync();
-// store.sync();
 
+const allowedOrigins = ["http://localhost:5173", "https://tafe-pi.vercel.app"];
+
+// Enhanced CORS configuration
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error("Not allowed by CORS"), false);
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    exposedHeaders: ["set-cookie"],
+  })
+);
+
+app.options("*", cors());
+
+// Session configuration with proper cookie settings
 app.use(
   session({
     secret: process.env.SESS_SECRET,
     resave: false,
     saveUninitialized: true,
     store: store,
-    secure: "auto",
+    cookie: {
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000,
+    },
   })
 );
 
-app.use(
-  cors({
-    origin: "http://localhost:5173",
-    credentials: true,
-  })
-);
+// Additional CORS headers middleware
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.header("Access-Control-Allow-Origin", origin);
+    res.header("Access-Control-Allow-Credentials", "true");
+  }
+  next();
+});
+
 app.use(express.json());
 app.use(AuthRoute);
 app.use(AdminRoute);
@@ -46,6 +71,6 @@ app.use(TeacherRoute);
 app.use(StudentRoute);
 app.use(AttedanceRoute);
 
-app.listen(process.env.APP_PORT, () => {
+app.listen(process.env.MYSQLPORT, () => {
   console.log("Server Sedang Berjalan...");
 });
