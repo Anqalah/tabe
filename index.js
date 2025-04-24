@@ -49,6 +49,6 @@ app.use(TeacherRoute);
 app.use(StudentRoute);
 app.use(AttedanceRoute);
 
-app.listen(process.env.APP_PORT, () => {
+app.listen(process.env.MYSQLPORT, () => {
   console.log("Server Sedang Berjalan...");
 });
