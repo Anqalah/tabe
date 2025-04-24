@@ -33,7 +33,15 @@ app.use(
   })
 );
 
-app.use(cors());
+app.use(
+  cors({
+    origin: "http://localhost:5173", // sesuaikan dengan origin frontend
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+app.options("*", cors());
 app.use(express.json());
 app.use(AuthRoute);
 app.use(AdminRoute);
@@ -41,6 +49,6 @@ app.use(TeacherRoute);
 app.use(StudentRoute);
 app.use(AttedanceRoute);
 
-app.listen(process.env.MYSQLPORT, () => {
+app.listen(process.env.APP_PORT, () => {
   console.log("Server Sedang Berjalan...");
 });

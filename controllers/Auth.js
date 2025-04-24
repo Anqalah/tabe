@@ -21,9 +21,7 @@ export const Login = async (req, res) => {
   if (!req.body.email || !req.body.password) {
     return res.status(400).json({ msg: "Email dan password harus diisi" });
   }
-
   const { email, password } = req.body;
-
   try {
     // Cari user dengan validasi email
     const user = await findUserByEmail(email);
@@ -36,17 +34,14 @@ export const Login = async (req, res) => {
     if (!match) {
       return res.status(400).json({ msg: "Email atau password salah" });
     }
-
     // Buat session
     req.session.userId = user.uuid;
-
     // Pastikan session tersimpan sebelum mengirim response
     req.session.save((err) => {
       if (err) {
         console.error("Session save error:", err);
         return res.status(500).json({ msg: "Gagal menyimpan session" });
       }
-
       res.status(200).json({
         uuid: user.uuid,
         name: user.name,
@@ -56,12 +51,10 @@ export const Login = async (req, res) => {
     });
   } catch (error) {
     console.error("Login error:", error);
-
     // Berikan pesan error yang lebih spesifik
     if (error.message.includes("argon2")) {
       return res.status(500).json({ msg: "Error verifikasi password" });
     }
-
     res.status(500).json({ msg: "Terjadi kesalahan pada server" });
   }
 };
@@ -203,7 +196,6 @@ export const registerComplete = [
       });
     } catch (error) {
       if (req.file) fs.unlinkSync(req.file.path);
-
       console.error("Register complete error:", error);
       res.status(500).json({
         error: "Gagal menyelesaikan registrasi",

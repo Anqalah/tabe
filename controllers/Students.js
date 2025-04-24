@@ -7,13 +7,17 @@ export const getStudents = async (req, res) => {
     const response = await Students.findAll({
       attributes: [
         "uuid",
+        "role",
+        "email",
         "name",
         "kelas",
-        "jk",
+        "umur",
+        "alamat",
         "hp",
         "bidang",
-        "email",
-        "role",
+        "jk",
+        "foto_profile",
+        "face_image",
       ],
       include: [
         {
