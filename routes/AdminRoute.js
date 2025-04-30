@@ -11,7 +11,7 @@ const router = express.Router();
 
 router.get("/admins", verifyUser, adminOnly, getAdmins);
 router.get("/admins/:id", verifyUser, adminOnly, getAdminById);
-router.post("/admins", createAdmin);
+router.post("/admins", verifyUser, adminOnly, createAdmin);
 router.patch("/admins/:id", verifyUser, adminOnly, updateAdmin);
 router.delete("/admins/:id", verifyUser, adminOnly, deleteAdmin);
 

@@ -29,7 +29,18 @@ app.use(
     resave: false,
     saveUninitialized: true,
     store: store,
-    secure: "auto",
+    cookie: {
+      secure: process.env.NODE_ENV === "production", // true di production, false di development
+      httpOnly: true,
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // none untuk production jika cross-site
+      maxAge: 24 * 60 * 60 * 1000, // 1 hari
+      domain:
+        process.env.NODE_ENV === "production"
+          ? ".tabe.onrender.com"
+          : undefined, // Sesuaikan dengan domain production
+    },
+    proxy: process.env.NODE_ENV === "production", // Diperlukan jika di belakang proxy seperti Render
+    name: "tabe.sid", // Nama cookie khusus
   })
 );
 

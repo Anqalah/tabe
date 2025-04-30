@@ -36,18 +36,24 @@ export const Login = async (req, res) => {
     }
     // Buat session
     req.session.userId = user.uuid;
-    // Pastikan session tersimpan sebelum mengirim response
-    req.session.save((err) => {
-      if (err) {
-        console.error("Session save error:", err);
-        return res.status(500).json({ msg: "Gagal menyimpan session" });
-      }
-      res.status(200).json({
-        uuid: user.uuid,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      });
+    req.session.role = user.role;
+
+    // Set cookie options
+    res.cookie("sessionId", req.sessionID, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      maxAge: 24 * 60 * 60 * 1000, // 1 hari
+    });
+
+    // Set header untuk CORS
+    res.header("Access-Control-Allow-Credentials", "true");
+
+    return res.status(200).json({
+      uuid: user.uuid,
+      name: user.name,
+      email: user.email,
+      role: user.role,
     });
   } catch (error) {
     console.error("Login error:", error);
