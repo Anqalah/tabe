@@ -7,6 +7,35 @@ const ensureDir = (dir) => {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 };
 
+// ===== Konfigurasi untuk Upload Foto Profil =====
+const profileStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = "./assets/profile_images/";
+    ensureDir(dir);
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const userId = req.user?.id || "unknown";
+    const ext = path.extname(file.originalname);
+    const uniqueName = `profile-${userId}-${Date.now()}-${Math.random()
+      .toString(36)
+      .substring(2)}${ext}`;
+    cb(null, uniqueName);
+  },
+});
+
+const profileImageFilter = (req, file, cb) => {
+  file.mimetype.startsWith("image/")
+    ? cb(null, true)
+    : cb(new Error("Hanya file gambar yang diperbolehkan"), false);
+};
+
+export const profileUpload = multer({
+  storage: profileStorage,
+  fileFilter: profileImageFilter,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+}).single("foto");
+
 // ===== Konfigurasi untuk Upload Gambar Wajah =====
 const faceStorage = multer.diskStorage({
   destination: (req, file, cb) => {

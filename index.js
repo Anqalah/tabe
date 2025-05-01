@@ -18,7 +18,7 @@ await db.authenticate();
 
 app.use(
   cors({
-    origin: "http://localhost:5173", // sesuaikan dengan origin frontend
+    origin: ["http://localhost:5173", "https://tafe-pi.vercel.app"], // sesuaikan dengan origin frontend
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -31,6 +31,7 @@ app.use(AdminRoute);
 app.use(TeacherRoute);
 app.use(StudentRoute);
 app.use(AttedanceRoute);
+app.use("/assets/profile_images", express.static("assets/profile_images"));
 
 app.listen(process.env.MYSQLPORT, () => {
   console.log("Server Sedang Berjalan...");

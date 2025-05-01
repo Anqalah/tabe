@@ -15,7 +15,15 @@ export const getAdmins = async (req, res) => {
 export const getAdminById = async (req, res) => {
   try {
     const response = await Admins.findOne({
-      attributes: ["uuid", "name", "email", "hp", "role"],
+      attributes: [
+        "uuid",
+        "name",
+        "email",
+        "hp",
+        "role",
+        "foto_profile",
+        "foto_profile_url",
+      ],
       where: { uuid: req.params.id },
     });
     res.status(200).json(response);
@@ -51,16 +59,24 @@ export const updateAdmin = async (req, res) => {
   });
   if (!user) return res.status(404).json({ msg: "User Tidak Ditemukan" });
   const { name, email, password, confPassword, hp } = req.body;
-  let hashPassword;
-  if (password === "" || password === null) {
-    hashPassword = user.password;
-  } else {
-    hashPassword = await argon2.hash(password);
+  let hashPassword = user.password;
+  // Jika password tidak kosong dan konfirmasi password cocok, maka kita update password
+  if (password && password !== "") {
+    if (password !== confPassword)
+      return res
+        .status(400)
+        .json({ msg: "Password dan Confirm Password Harus Sama" });
+    hashPassword = await argon2.hash(password); // Hash password baru
   }
-  if (password !== confPassword)
-    return res
-      .status(400)
-      .json({ msg: "Password dan Confirm Password Harus Sama" });
+
+  // Menangani foto profil jika ada
+  let fotoProfileUrl = user.foto_profile_url;
+  let fotoProfile = user.foto_profile;
+  if (req.file) {
+    fotoProfile = req.file.filename;
+    fotoProfileUrl = req.file.path;
+  }
+
   try {
     await Admins.update(
       {
@@ -68,6 +84,8 @@ export const updateAdmin = async (req, res) => {
         email: email,
         hp: hp,
         password: hashPassword,
+        foto_profile: fotoProfile,
+        foto_profile_url: fotoProfileUrl,
       },
       {
         where: { id: user.id },
