@@ -52,14 +52,17 @@ const Students = db.define(
     foto_profile: {
       type: DataTypes.STRING,
     },
+    foto_profile_url: {
+      type: DataTypes.STRING,
+    },
     face_image: {
+      type: DataTypes.STRING,
+    },
+    face_image_url: {
       type: DataTypes.STRING,
     },
   },
   { freezeTableName: true }
 );
-
-Teachers.hasMany(Students);
-Students.belongsTo(Teachers);
 
 export default Students;

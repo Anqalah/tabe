@@ -6,12 +6,12 @@ import {
   updateAdmin,
   deleteAdmin,
 } from "../controllers/Admins.js";
-import { verifyUser, adminOnly } from "../middleware/AuthUsers.js";
+import { verifyUser, adminOnly } from "../middleware/AuthUser.js";
 const router = express.Router();
 
 router.get("/admins", verifyUser, adminOnly, getAdmins);
 router.get("/admins/:id", verifyUser, adminOnly, getAdminById);
-router.post("/admins", verifyUser, adminOnly, createAdmin);
+router.post("/admins", createAdmin);
 router.patch("/admins/:id", verifyUser, adminOnly, updateAdmin);
 router.delete("/admins/:id", verifyUser, adminOnly, deleteAdmin);
 

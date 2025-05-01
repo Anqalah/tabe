@@ -6,7 +6,7 @@ import {
   updateStudent,
   deleteStudent,
 } from "../controllers/Students.js";
-import { adminOnly, verifyUser } from "../middleware/AuthUsers.js";
+import { adminOnly, verifyUser } from "../middleware/AuthUser.js";
 const router = express.Router();
 
 router.get("/students", verifyUser, getStudents);

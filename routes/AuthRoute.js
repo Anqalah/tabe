@@ -7,7 +7,6 @@ import {
   registerComplete,
   deleteRegister,
 } from "../controllers/Auth.js";
-
 const router = express.Router();
 
 // User Authentication Routes

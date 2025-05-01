@@ -6,7 +6,7 @@ import {
   updateTeacher,
   deleteTeacher,
 } from "../controllers/Teachers.js";
-import { adminOnly, verifyUser } from "../middleware/AuthUsers.js";
+import { adminOnly, verifyUser } from "../middleware/AuthUser.js";
 const router = express.Router();
 
 router.get("/teachers", verifyUser, adminOnly, getTeachers);

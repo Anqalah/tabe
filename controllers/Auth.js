@@ -7,6 +7,7 @@ import { faceUpload } from "../middleware/Multer.js";
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
+import jwt from "jsonwebtoken";
 
 const findUserByEmail = async (email) => {
   return (
@@ -17,120 +18,89 @@ const findUserByEmail = async (email) => {
 };
 
 export const Login = async (req, res) => {
-  // Validasi input
-  if (!req.body.email || !req.body.password) {
+  const { email, password } = req.body;
+  if (!email || !password) {
     return res.status(400).json({ msg: "Email dan password harus diisi" });
   }
-  const { email, password } = req.body;
   try {
-    // Cari user dengan validasi email
     const user = await findUserByEmail(email);
     if (!user) {
       return res.status(404).json({ msg: "Email atau password salah" });
     }
-
-    // Verifikasi password
     const match = await argon2.verify(user.password, password);
     if (!match) {
       return res.status(400).json({ msg: "Email atau password salah" });
     }
-    // Buat session
-    req.session.userId = user.uuid;
-    req.session.role = user.role;
-
-    // Set cookie options
-    res.cookie("sessionId", req.sessionID, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      maxAge: 24 * 60 * 60 * 1000, // 1 hari
-    });
-
-    // Set header untuk CORS
-    res.header("Access-Control-Allow-Credentials", "true");
-
+    const token = jwt.sign(
+      { uuid: user.uuid, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
     return res.status(200).json({
-      uuid: user.uuid,
-      name: user.name,
-      email: user.email,
-      role: user.role,
+      msg: "Login berhasil",
+      token,
+      user: {
+        uuid: user.uuid,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
     });
   } catch (error) {
     console.error("Login error:", error);
-    // Berikan pesan error yang lebih spesifik
-    if (error.message.includes("argon2")) {
-      return res.status(500).json({ msg: "Error verifikasi password" });
-    }
-    res.status(500).json({ msg: "Terjadi kesalahan pada server" });
+    return res.status(500).json({ msg: "Terjadi kesalahan pada server" });
   }
 };
 
 export const Me = async (req, res) => {
-  if (!req.session.userId) {
-    return res.status(401).json({ msg: "Mohon Login Terlebih Dahulu" });
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.split(" ")[1];
+  if (!token) {
+    return res.status(401).json({ msg: "Mohon login terlebih dahulu" });
   }
-  // Mencari user di tabel admins
-  let user = await Admins.findOne({
-    attributes: ["uuid", "name", "email", "role"],
-    where: { uuid: req.session.userId },
-  });
-  // Mencari user di tabel teachers
-  if (!user) {
-    user = await Teachers.findOne({
-      attributes: ["uuid", "name", "email", "role"],
-      where: { uuid: req.session.userId },
-    });
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    let user =
+      (await Admins.findOne({
+        attributes: ["uuid", "name", "email", "role"],
+        where: { uuid: decoded.uuid },
+      })) ||
+      (await Teachers.findOne({
+        attributes: ["uuid", "name", "email", "role"],
+        where: { uuid: decoded.uuid },
+      })) ||
+      (await Students.findOne({
+        attributes: ["uuid", "name", "email", "role"],
+        where: { uuid: decoded.uuid },
+      }));
+    if (!user) return res.status(404).json({ msg: "User tidak ditemukan" });
+    res.status(200).json(user);
+  } catch (err) {
+    return res.status(403).json({ msg: "Token tidak valid atau kadaluarsa" });
   }
-  // Jika masih tidak ditemukan, cari di tabel students
-  if (!user) {
-    user = await Students.findOne({
-      attributes: ["uuid", "name", "email", "role"],
-      where: { uuid: req.session.userId },
-    });
-  }
-  if (!user) return res.status(404).json({ msg: "User Tidak Ditemukan" });
-  res.status(200).json(user);
 };
 
 export const Logout = (req, res) => {
-  req.session.destroy((err) => {
-    if (err) return res.status(400).json({ msg: "Tidak Dapat Logout" });
-    res.status(200).json({ msg: "Logout Berhasil" });
-  });
+  res
+    .status(200)
+    .json({ msg: "Logout berhasil. Silakan hapus token di client." });
 };
 
-// Register Tahap Awal
 export const registerInitial = async (req, res) => {
+  const { name, email, alamat, jk, umur, hp, bidang, kelas, password } =
+    req.body;
+
+  if (!name || !email || !password)
+    return res.status(400).json({ msg: "Semua field wajib diisi" });
+
+  const existing = await Students.findOne({ where: { email } });
+  if (existing) return res.status(409).json({ msg: "Email sudah terdaftar" });
+
+  const hashPassword = await argon2.hash(password);
+  const verificationToken = crypto.randomBytes(32).toString("hex");
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 menit
+
   try {
-    const {
-      password,
-      confPassword,
-      email,
-      alamat,
-      name,
-      jk,
-      umur,
-      hp,
-      bidang,
-      kelas,
-    } = req.body;
-
-    if (!password || !confPassword || !email || !alamat || !name) {
-      return res.status(400).json({ error: "Semua field wajib diisi" });
-    }
-
-    if (password !== confPassword) {
-      return res.status(400).json({ error: "Password tidak cocok" });
-    }
-
-    if (await Students.findOne({ where: { email } })) {
-      return res.status(400).json({ error: "Email sudah terdaftar" });
-    }
-
-    const hashPassword = await argon2.hash(password);
-    const verificationToken = crypto.randomBytes(32).toString("hex");
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 menit
-
     const pendingUser = await PendingRegistration.create({
       name,
       email,
@@ -140,13 +110,13 @@ export const registerInitial = async (req, res) => {
       hp,
       bidang,
       kelas,
-      role: "Students",
+      role: "Student",
       password: hashPassword,
       verification_token: verificationToken,
       expires_at: expiresAt,
     });
 
-    res.json({
+    res.status(201).json({
       msg: "Pendaftaran tahap awal berhasil",
       verification_token: verificationToken,
       expires_at: expiresAt,
@@ -160,7 +130,6 @@ export const registerInitial = async (req, res) => {
 // Register Tahap Akhir dengan upload wajah
 export const registerComplete = [
   faceUpload.single("face_image"),
-
   async (req, res) => {
     try {
       const { verification_token } = req.body;
@@ -181,7 +150,7 @@ export const registerComplete = [
           .json({ error: "Token tidak valid atau sudah kedaluwarsa" });
       }
 
-      const faceImagePath = path.relative("assets", req.file.path); // relative ke folder static
+      const faceImagePath = path.relative("assets", req.file.path);
 
       const newStudent = await Students.create({
         ...pending.dataValues,

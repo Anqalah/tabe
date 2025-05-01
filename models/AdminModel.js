@@ -45,10 +45,10 @@ const Admins = db.define(
         notEmpty: true,
       },
     },
-    foto: {
+    foto_profile: {
       type: DataTypes.STRING,
     },
-    url: {
+    foto_profile_url: {
       type: DataTypes.STRING,
     },
   },

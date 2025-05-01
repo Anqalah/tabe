@@ -54,7 +54,10 @@ const Teachers = db.define(
         notEmpty: true,
       },
     },
-    foto: {
+    foto_profile_url: {
+      type: DataTypes.STRING,
+    },
+    foto_profile: {
       type: DataTypes.STRING,
     },
   },
