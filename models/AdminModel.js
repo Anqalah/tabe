@@ -48,9 +48,6 @@ const Admins = db.define(
     foto_profile: {
       type: DataTypes.STRING,
     },
-    foto_profile_url: {
-      type: DataTypes.STRING,
-    },
   },
   { freezeTableName: true }
 );

@@ -1,6 +1,5 @@
 import jwt from "jsonwebtoken";
 import Admins from "../models/AdminModel.js";
-import Teachers from "../models/TeacherModel.js";
 import Students from "../models/StudentModel.js";
 
 export const verifyUser = async (req, res, next) => {
@@ -13,7 +12,6 @@ export const verifyUser = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     let user =
       (await Admins.findOne({ where: { uuid: decoded.uuid } })) ||
-      (await Teachers.findOne({ where: { uuid: decoded.uuid } })) ||
       (await Students.findOne({ where: { uuid: decoded.uuid } }));
     if (!user) return res.status(404).json({ msg: "User tidak ditemukan" });
     req.userId = user.id;
@@ -34,4 +32,3 @@ export const adminOnly = async (req, res, next) => {
     next();
   });
 };
-

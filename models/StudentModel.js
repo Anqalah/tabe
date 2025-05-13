@@ -1,6 +1,5 @@
 import { Sequelize } from "sequelize";
 import db from "../config/Database.js";
-import Teachers from "./TeacherModel.js";
 
 const { DataTypes } = Sequelize;
 const Students = db.define(
@@ -52,13 +51,8 @@ const Students = db.define(
     foto_profile: {
       type: DataTypes.STRING,
     },
-    foto_profile_url: {
-      type: DataTypes.STRING,
-    },
+
     face_image: {
-      type: DataTypes.STRING,
-    },
-    face_image_url: {
       type: DataTypes.STRING,
     },
   },

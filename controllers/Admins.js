@@ -15,15 +15,7 @@ export const getAdmins = async (req, res) => {
 export const getAdminById = async (req, res) => {
   try {
     const response = await Admins.findOne({
-      attributes: [
-        "uuid",
-        "name",
-        "email",
-        "hp",
-        "role",
-        "foto_profile",
-        "foto_profile_url",
-      ],
+      attributes: ["uuid", "name", "email", "hp", "role", "foto_profile"],
       where: { uuid: req.params.id },
     });
     res.status(200).json(response);
@@ -60,7 +52,8 @@ export const updateAdmin = async (req, res) => {
   if (!user) return res.status(404).json({ msg: "User Tidak Ditemukan" });
   const { name, email, password, confPassword, hp } = req.body;
   let hashPassword = user.password;
-  // Jika password tidak kosong dan konfirmasi password cocok, maka kita update password
+
+  // Jika password tidak kosong dan konfirmasi password cocok,
   if (password && password !== "") {
     if (password !== confPassword)
       return res
@@ -70,11 +63,12 @@ export const updateAdmin = async (req, res) => {
   }
 
   // Menangani foto profil jika ada
-  let fotoProfileUrl = user.foto_profile_url;
   let fotoProfile = user.foto_profile;
   if (req.file) {
-    fotoProfile = req.file.filename;
-    fotoProfileUrl = req.file.path;
+    const filename = req.file.filename;
+    fotoProfile = `${req.protocol}://${req.get(
+      "host"
+    )}/assets/profile_images/${filename}`;
   }
 
   try {
@@ -85,7 +79,6 @@ export const updateAdmin = async (req, res) => {
         hp: hp,
         password: hashPassword,
         foto_profile: fotoProfile,
-        foto_profile_url: fotoProfileUrl,
       },
       {
         where: { id: user.id },

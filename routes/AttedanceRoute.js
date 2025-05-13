@@ -1,22 +1,14 @@
 import express from "express";
-import { faceUpload } from "../middleware/Multer.js"; // Sesuaikan dengan lokasi file upload
 import {
-  clockIn,
-  clockOut,
-  clockInResults,
+  getAttendances,
+  getAttendanceById,
+  createAttendance,
 } from "../controllers/Attedances.js";
+import { attendanceUpload } from "../middleware/Multer.js";
 const router = express.Router();
 
-router.get("/attendances/clockin-result/:id", clockInResults);
-router.post(
-  "/attendances/clockin/:id",
-  faceUpload.single("facePhotoClockIn"),
-  clockIn
-);
-router.post(
-  "/attendances/clockout/:id",
-  faceUpload.single("facePhotoClockOut"),
-  clockOut
-);
+router.get("/attendances", getAttendances);
+router.get("/attendances/:id", getAttendanceById);
+router.post("/attendances", attendanceUpload.single("foto"), createAttendance);
 
 export default router;

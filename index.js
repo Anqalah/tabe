@@ -6,15 +6,14 @@ import AdminRoute from "./routes/AdminRoute.js";
 import AttedanceRoute from "./routes/AttedanceRoute.js";
 import AuthRoute from "./routes/AuthRoute.js";
 import StudentRoute from "./routes/StudentRoute.js";
-import TeacherRoute from "./routes/TeacherRoute.js";
 
 dotenv.config();
 
 const app = express();
 await db.authenticate();
 // await sessionStore.drop();
-// await PendingRegistration.sync({ force: true });
-// await PendingRegistration.sync();
+// await Attendances.sync({ force: true });
+// await Attendances.sync();
 
 app.use(
   cors({
@@ -36,11 +35,11 @@ app.options(
 app.use(express.json());
 app.use(AuthRoute);
 app.use(AdminRoute);
-app.use(TeacherRoute);
 app.use(StudentRoute);
 app.use(AttedanceRoute);
+app.use("/assets/attendances", express.static("assets/attendances"));
 app.use("/assets/profile_images", express.static("assets/profile_images"));
 
-app.listen(process.env.MYSQLPORT, () => {
+app.listen(process.env.APP_PORT, () => {
   console.log("Server Sedang Berjalan...");
 });

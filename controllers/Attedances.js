@@ -1,119 +1,183 @@
 import Attendances from "../models/AttendanceModel.js";
 import Students from "../models/StudentModel.js";
-import path from "path";
 
-export const clockInResults = async (req, res) => {
+export const getAttendances = async (req, res) => {
   try {
-    // Assuming the user ID is stored in the request's user object (from middleware)
-    const userId = req.user.id; // Adjust based on your authentication
-    // Fetch clock-in results for the user
-    const clockInData = await Attendances.findOne({
-      where: { studentId: userId },
-    }).sort({
-      clockInTime: -1,
-    });
-    w;
-    if (!clockInData) {
-      return res.status(404).json({ msg: "No clock-in data found." });
-    }
-    // Return the retrieved data
-    res.status(200).json(clockInData);
-  } catch (error) {
-    console.error("Error fetching clock-in data:", error);
-    res.statucs(500).json({ msg: "Server error" });
-  }
-};
+    const response = await Attendances.findAll({
+      attributes: [
+        "uuid",
+        "ClockIn",
+        "ClockOut",
+        "Date",
+        "LocationClockIn",
+        "LocationClockOut",
+        "facePhotoClockIn",
+        "facePhotoClockOut",
+      ],
 
-export const clockIn = async (req, res) => {
-  const user = await Students.findOne({
-    where: { uuid: req.params.id },
-  });
-  if (!user) return res.status(404).json({ msg: "User Tidak Ditemukan" });
-  const { latitude, longitude } = req.body; // Only include latitude and longitude
-  const file = req.file;
-  if (!file) return res.status(400).json({ msg: "Mohon unggah wajah" });
-  const ext = path.extname(file.originalname);
-  const facePhotoClockInFile = `clockin_${Date.now()}${ext}`;
-  try {
-    const date = new Date().toISOString().split("T")[0];
-    const userId = user.id;
-    const existingAttendance = await Attendances.findOne({
-      where: {
-        studentId: userId,
-        date: date,
-      },
+      include: [
+        {
+          model: Students,
+          attributes: [
+            "uuid",
+            "name",
+            "kelas",
+            "jk",
+            "hp",
+            "bidang",
+            "email",
+            "role",
+          ],
+        },
+      ],
     });
-    if (existingAttendance) {
-      return res.status(400).json({ msg: "Sudah melakukan clock in hari ini" });
-    }
-    const { latitude, longitude } = req.body; // Mengambil latitude dan longitude dari body
-    const locationClockIn = JSON.stringify({ latitude, longitude }); // Mengonversi objek ke string
-    const newAttendance = await Attendances.create({
-      studentId: userId,
-      clockIn: new Date(),
-      locationClockIn: locationClockIn,
-      facePhotoClockIn: facePhotoClockInFile,
-      facePhotoClockInUrl: `/assets/attendances/${facePhotoClockInFile}`,
-    });
-    res.status(201).json({ msg: "Clock in berhasil", data: newAttendance });
+    res.status(200).json(response);
   } catch (error) {
     res.status(500).json({ msg: error.message });
   }
 };
 
-export const clockOut = async (req, res) => {
-  const user = await Students.findOne({
-    where: { uuid: req.params.id },
-  });
-  if (!user) {
-    return res.status(404).json({ msg: "User Tidak Ditemukan" });
-  }
-
-  const { latitude, longitude } = req.body; // Only include latitude and longitude
-  const file = req.file;
-  if (!file) return res.status(400).json({ msg: "Mohon unggah wajah" });
-  const ext = path.extname(file.originalname);
-  const facePhotoClockOutFile = `clockout_${Date.now()}${ext}`;
+export const getAttendanceById = async (req, res) => {
   try {
-    const date = new Date().toISOString().split("T")[0];
-    const studentId = user.id;
+    const student = await Students.findOne({
+      where: {
+        id: req.params.id,
+      },
+      attributes: ["id", "createdAt"],
+    });
+
+    if (!student)
+      return res.status(404).json({ msg: "Siswa tidak ditemukan." });
+
+    console.log("studentId", student.id);
+
+    const response = await Attendances.findOne({
+      where: { studentId: student.id },
+      order: [["date", "DESC"]],
+      attributes: [
+        "uuid",
+        "ClockIn",
+        "ClockOut",
+        "Date",
+        "LocationClockIn",
+        "LocationClockOut",
+        "facePhotoClockIn",
+        "facePhotoClockOut",
+      ],
+      include: [
+        {
+          model: Students,
+          attributes: [
+            "uuid",
+            "name",
+            "kelas",
+            "jk",
+            "hp",
+            "bidang",
+            "email",
+            "role",
+          ],
+        },
+      ],
+    });
+    if (!response) {
+      return res.status(404).json({ msg: "Data kehadiran tidak ditemukan." });
+    }
+    res.status(200).json(response);
+  } catch (error) {
+    res.status(500).json({ msg: error.message });
+  }
+};
+
+export const createAttendance = async (req, res) => {
+  try {
+    const { studentId, latitude, longitude, type } = req.body;
+
+    if (!req.file)
+      return res.status(400).json({ msg: "Foto wajah wajib diunggah." });
+
+    // Cari student berdasarkan UUID
+    const student = await Students.findOne({ where: { uuid: studentId } });
+    if (!student)
+      return res.status(404).json({ msg: "Mahasiswa tidak ditemukan." });
+
+    const today = new Date().toISOString().split("T")[0];
+    const internalStudentId = student.id;
+
+    // Cek apakah sudah ada absensi hari ini
     const existingAttendance = await Attendances.findOne({
       where: {
-        studentId: studentId,
-        date: date,
+        studentId: internalStudentId,
+        date: today,
       },
     });
-    if (!existingAttendance) {
-      return res.status(404).json({ msg: "Belum melakukan clock in hari ini" });
-    }
-    const existingClockOut = await Attendances.findOne({
-      where: {
-        studentId: studentId,
-        date: date,
-      },
-    });
-    if (existingClockOut) {
-      return res
-        .status(400)
-        .json({ msg: "Sudah melakukan clock out hari ini" });
-    }
-    await Attendances.update(
-      {
-        clockOut: new Date(),
-        latitude: latitude, // Menyimpan latitude
-        longitude: longitude, // Menyimpan longitude
-        facePhotoClockOut: facePhotoClockOutFile,
-        facePhotoClockOutUrl: `/assets/attendances/${facePhotoClockOutFile}`,
-      },
-      {
-        where: { id: existingAttendance.id },
+
+    const photoPath = req.file.filename;
+    const photoUrl = `${req.protocol}://${req.get(
+      "host"
+    )}/assets/attendances/${photoPath}`;
+
+    if (type === "clockIn") {
+      if (existingAttendance) {
+        return res
+          .status(400)
+          .json({ msg: "Anda sudah melakukan clock-in hari ini." });
       }
-    );
 
-    res
-      .status(200)
-      .json({ msg: "Clock out berhasil", data: existingAttendance });
+      const newAttendance = await Attendances.create({
+        studentId: internalStudentId,
+        clockIn: new Date(),
+        date: today,
+        locationClockIn: `${latitude},${longitude}`,
+        facePhotoClockIn: photoUrl,
+      });
+
+      const createdAttendance = await Attendances.findOne({
+        where: { id: newAttendance.id },
+        attributes: ["uuid"],
+      });
+
+      return res.status(201).json({
+        msg: "Clock-in berhasil.",
+        data: {
+          uuid: createdAttendance.uuid,
+          photoUrl,
+        },
+      });
+    }
+
+    if (type === "clockOut") {
+      if (!existingAttendance) {
+        return res
+          .status(400)
+          .json({ msg: "Silakan clock In terlebih dahulu." });
+      }
+
+      if (existingAttendance.clockOut) {
+        return res
+          .status(400)
+          .json({ msg: "Anda sudah melakukan clock-out hari ini." });
+      }
+
+      existingAttendance.clockOut = new Date();
+      existingAttendance.locationClockOut = `${latitude},${longitude}`;
+      existingAttendance.facePhotoClockOut = photoUrl;
+      await existingAttendance.save();
+
+      return res.status(200).json({
+        msg: "Clock-out berhasil.",
+        photoUrl,
+      });
+    }
+
+    return res.status(400).json({
+      msg: "Tipe absensi tidak valid (gunakan clockIn atau clockOut).",
+    });
   } catch (error) {
-    res.status(500).json({ msg: error.message });
+    console.error(error);
+    res.status(500).json({ msg: "Terjadi kesalahan pada server." });
   }
 };
+
+export const updateAttendance = async (req, res) => {};
+export const deleteAttendance = async (req, res) => {};

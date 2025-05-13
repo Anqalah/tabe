@@ -1,6 +1,5 @@
 import argon2 from "argon2";
 import Admins from "../models/AdminModel.js";
-import Teachers from "../models/TeacherModel.js";
 import Students from "../models/StudentModel.js";
 import PendingRegistration from "../models/PendingRegistration.js";
 import { faceUpload } from "../middleware/Multer.js";
@@ -12,7 +11,6 @@ import jwt from "jsonwebtoken";
 const findUserByEmail = async (email) => {
   return (
     (await Admins.findOne({ where: { email } })) ||
-    (await Teachers.findOne({ where: { email } })) ||
     (await Students.findOne({ where: { email } }))
   );
 };
@@ -62,15 +60,11 @@ export const Me = async (req, res) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     let user =
       (await Admins.findOne({
-        attributes: ["uuid", "name", "email", "role"],
-        where: { uuid: decoded.uuid },
-      })) ||
-      (await Teachers.findOne({
-        attributes: ["uuid", "name", "email", "role"],
+        attributes: ["id", "uuid", "name", "email", "role"],
         where: { uuid: decoded.uuid },
       })) ||
       (await Students.findOne({
-        attributes: ["uuid", "name", "email", "role"],
+        attributes: ["id", "uuid", "name", "email", "role"],
         where: { uuid: decoded.uuid },
       }));
     if (!user) return res.status(404).json({ msg: "User tidak ditemukan" });
