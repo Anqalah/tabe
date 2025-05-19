@@ -60,11 +60,11 @@ export const Me = async (req, res) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     let user =
       (await Admins.findOne({
-        attributes: ["id", "uuid", "name", "email", "role"],
+        attributes: ["id", "uuid", "name", "email", "role", "foto_profile"],
         where: { uuid: decoded.uuid },
       })) ||
       (await Students.findOne({
-        attributes: ["id", "uuid", "name", "email", "role"],
+        attributes: ["id", "uuid", "name", "email", "role", "foto_profile"],
         where: { uuid: decoded.uuid },
       }));
     if (!user) return res.status(404).json({ msg: "User tidak ditemukan" });
@@ -104,7 +104,6 @@ export const registerInitial = async (req, res) => {
       hp,
       bidang,
       kelas,
-      role: "Student",
       password: hashPassword,
       verification_token: verificationToken,
       expires_at: expiresAt,
@@ -129,7 +128,13 @@ export const registerComplete = [
       const { verification_token } = req.body;
 
       if (!verification_token || !req.file) {
-        if (req.file) fs.unlinkSync(req.file.path);
+        if (req.file) {
+          try {
+            await fs.promises.unlink(req.file.path);
+          } catch (err) {
+            console.error("Gagal menghapus file:", err);
+          }
+        }
         return res.status(400).json({ error: "Data tidak lengkap" });
       }
 
@@ -138,13 +143,19 @@ export const registerComplete = [
       });
 
       if (!pending || new Date() > pending.expires_at) {
-        if (req.file) fs.unlinkSync(req.file.path);
+        if (req.file) {
+          try {
+            await fs.promises.unlink(req.file.path);
+          } catch (err) {
+            console.error("Gagal menghapus file:", err);
+          }
+        }
         return res
           .status(400)
           .json({ error: "Token tidak valid atau sudah kedaluwarsa" });
       }
 
-      const faceImagePath = path.relative("assets", req.file.path);
+      const faceImagePath = `face_images/${path.basename(req.file.path)}`;
 
       const newStudent = await Students.create({
         ...pending.dataValues,
@@ -160,7 +171,9 @@ export const registerComplete = [
           id: newStudent.id,
           name: newStudent.name,
           email: newStudent.email,
-          face_image_url: `/face_images/${path.basename(req.file.path)}`,
+          face_image: `${req.protocol}://${req.get(
+            "host"
+          )}/face_images/${path.basename(req.file.path)}`,
         },
       });
     } catch (error) {

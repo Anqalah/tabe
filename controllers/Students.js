@@ -52,55 +52,13 @@ export const getStudentById = async (req, res) => {
         "bidang",
         "email",
         "role",
+        "foto_profile",
       ],
       where: { uuid: req.params.id },
     });
     res.status(200).json(response);
   } catch (error) {
     res.status(500).json({ msg: error.message });
-  }
-};
-
-export const AddStudent = async (req, res) => {
-  try {
-    const { name, kelas, jk, hp, bidang, email, password, confPassword } =
-      req.body;
-
-    // Check password matching
-    if (password !== confPassword) {
-      return res.status(400).json({ error: "Password tidak cocok" });
-    }
-
-    // Check if email already registered
-    const existing = await Students.findOne({
-      where: { email },
-    });
-    if (existing) {
-      return res.status(400).json({ error: "Email sudah terdaftar" });
-    }
-
-    // Create student
-    const student = await Students.create({
-      name,
-      kelas,
-      jk,
-      hp,
-      bidang,
-      email,
-      password: hashPassword,
-    });
-
-    res.json({
-      success: true,
-      data: {
-        id: student.id,
-        name: student.name,
-        email: student.email,
-      },
-    });
-  } catch (error) {
-    console.error("Create student error:", error);
-    res.status(500).json({ error: "Gagal menyelesaikan registrasi" });
   }
 };
 

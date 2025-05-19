@@ -11,8 +11,8 @@ dotenv.config();
 
 const app = express();
 await db.authenticate();
-// await sessionStore.drop();
-// await Attendances.sync({ force: true });
+// await Attendances.drop();
+// await Admins.sync({ force: true });
 // await Attendances.sync();
 
 app.use(
@@ -26,7 +26,7 @@ app.use(
 app.options(
   "*",
   cors({
-    origin: ["http://localhost:5173", "https://tafe-pi.vercel.app"],
+    origin: ["http://localhost:5173", "https://tafe-pi.vercel.app,"],
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -39,7 +39,8 @@ app.use(StudentRoute);
 app.use(AttedanceRoute);
 app.use("/assets/attendances", express.static("assets/attendances"));
 app.use("/assets/profile_images", express.static("assets/profile_images"));
+app.use("/face_images", express.static("assets/face_images"));
 
-app.listen(process.env.APP_PORT, () => {
-  console.log("Server Sedang Berjalan...");
+app.listen(process.env.MYSQLPORT, () => {
+  console.log(`Server Sedang Berjalan... ${process.env.MYSQLPORT}`);
 });

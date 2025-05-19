@@ -1,10 +1,11 @@
 import argon2 from "argon2";
 import Admins from "../models/AdminModel.js";
+import fs from "fs";
 
 export const getAdmins = async (req, res) => {
   try {
     const response = await Admins.findAll({
-      attributes: ["uuid", "name", "hp", "email", "role"],
+      attributes: ["uuid", "name", "hp", "email", "role", "foto_profile"],
     });
     res.status(200).json(response);
   } catch (error) {
@@ -91,14 +92,35 @@ export const updateAdmin = async (req, res) => {
 };
 
 export const deleteAdmin = async (req, res) => {
-  const user = await Admins.findOne({
-    where: { uuid: req.params.id },
-  });
-  if (!user) return res.status(404).json({ msg: "User Tidak Ditemukan" });
   try {
-    await Admins.destroy({ where: { id: user.id } });
-    res.status(200).json({ msg: "User Deleted" });
+    // 1. Cari admin berdasarkan UUID
+    const admin = await Admins.findOne({
+      where: { uuid: req.params.id },
+    });
+    // 2. Handle jika admin tidak ditemukan
+    if (!admin) {
+      return res.status(404).json({ msg: "Admin tidak ditemukan" });
+    }
+    // 3. Hapus foto profil dari storage (optional)
+    if (admin.foto_profile) {
+      const filename = admin.foto_profile.split("/").pop();
+      const filePath = `../assets/profile_images/${filename}`;
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath); // Hapus file secara sync
+      }
+    }
+    // 4. Eksekusi penghapusan data
+    await Admins.destroy({
+      where: { id: admin.id },
+    });
+    // 5. Response sukses
+    res.status(200).json({ msg: "Admin berhasil dihapus" });
   } catch (error) {
-    res.status(400).json({ msg: error.message });
+    // 6. Handle error
+    console.error("Delete error:", error);
+    res.status(500).json({
+      msg: "Terjadi kesalahan saat menghapus admin",
+      error: error.message,
+    });
   }
 };
