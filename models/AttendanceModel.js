@@ -35,6 +35,9 @@ const Attendances = db.define(
     facePhotoClockOut: {
       type: DataTypes.STRING,
     },
+    verificationConfidence: {
+      type: DataTypes.FLOAT,
+    },
   },
   { freezeTableName: true }
 );

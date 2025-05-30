@@ -1,6 +1,8 @@
 import argon2 from "argon2";
 import Students from "../models/StudentModel.js";
 import Attendances from "../models/AttendanceModel.js";
+import fs from "fs";
+import path from "path";
 
 export const getStudents = async (req, res) => {
   try {
@@ -117,6 +119,46 @@ export const deleteStudent = async (req, res) => {
     where: { uuid: req.params.id },
   });
   if (!user) return res.status(404).json({ msg: "User Tidak Ditemukan" });
+
+  const extractPathFromURL = (url) => {
+    try {
+      const parsed = new URL(url);
+      const pathname = parsed.pathname.replace(/^\/+/, ""); // buang '/' di awal
+      return path.join(process.cwd(), "assets", pathname);
+    } catch (err) {
+      console.error("Gagal parsing URL:", err.message);
+      return null;
+    }
+  };
+
+  // Dapatkan path lokal untuk face_image dan foto_profile
+  const faceImagePath = user.face_image
+    ? extractPathFromURL(user.face_image)
+    : null;
+  const profileImagePath = user.foto_profile
+    ? extractPathFromURL(user.foto_profile)
+    : null;
+
+  // Hapus face_image jika ada
+  if (faceImagePath && fs.existsSync(faceImagePath)) {
+    try {
+      fs.unlinkSync(faceImagePath);
+      console.log("Face image deleted:", faceImagePath);
+    } catch (err) {
+      console.error("Gagal menghapus face image:", err.message);
+    }
+  }
+
+  // Hapus foto_profile jika ada
+  if (profileImagePath && fs.existsSync(profileImagePath)) {
+    try {
+      fs.unlinkSync(profileImagePath);
+      console.log("Foto profile deleted:", profileImagePath);
+    } catch (err) {
+      console.error("Gagal menghapus foto profile:", err.message);
+    }
+  }
+
   try {
     await Students.destroy({ where: { id: user.id } });
     res.status(200).json({ msg: "User Deleted" });

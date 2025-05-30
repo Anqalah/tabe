@@ -7,6 +7,8 @@ import fs from "fs";
 import path from "path";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
+import FormData from "form-data";
+import axios from "axios";
 
 const findUserByEmail = async (email) => {
   return (
@@ -155,7 +157,9 @@ export const registerComplete = [
           .json({ error: "Token tidak valid atau sudah kedaluwarsa" });
       }
 
-      const faceImagePath = `face_images/${path.basename(req.file.path)}`;
+      const faceImagePath = `${req.protocol}://${req.get(
+        "host"
+      )}/face_images/${path.basename(req.file.path)}`;
 
       const newStudent = await Students.create({
         ...pending.dataValues,
@@ -165,15 +169,38 @@ export const registerComplete = [
 
       await pending.destroy();
 
+      // KIRIM GAMBAR WAJAH KE FLASK HANYA SAAT REGISTRASI
+      try {
+        // Baca file dari sistem
+        const fileBuffer = await fs.promises.readFile(req.file.path);
+
+        // Buat FormData untuk dikirim ke Flask
+        const formData = new FormData();
+        formData.append("studentId", newStudent.uuid);
+        formData.append("image", fileBuffer, {
+          filename: path.basename(req.file.path),
+          contentType: req.file.mimetype,
+        });
+
+        // Kirim ke Flask
+        await axios.post("http://localhost:5000/save-reference", formData, {
+          headers: formData.getHeaders(),
+        });
+        console.log("[REGISTRATION] Reference image saved to Flask");
+      } catch (flaskError) {
+        console.error(
+          "[REGISTRATION] Failed to save reference image to Flask:",
+          flaskError
+        );
+      }
+
       res.json({
         success: true,
         data: {
           id: newStudent.id,
           name: newStudent.name,
           email: newStudent.email,
-          face_image: `${req.protocol}://${req.get(
-            "host"
-          )}/face_images/${path.basename(req.file.path)}`,
+          face_image: faceImagePath,
         },
       });
     } catch (error) {

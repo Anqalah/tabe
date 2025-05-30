@@ -12,7 +12,7 @@ dotenv.config();
 const app = express();
 await db.authenticate();
 // await Attendances.drop();
-// await Admins.sync({ force: true });
+// await Attendances.sync({ force: true });
 // await Attendances.sync();
 
 app.use(
@@ -41,6 +41,9 @@ app.use("/assets/attendances", express.static("assets/attendances"));
 app.use("/assets/profile_images", express.static("assets/profile_images"));
 app.use("/face_images", express.static("assets/face_images"));
 
-app.listen(process.env.MYSQLPORT, () => {
-  console.log(`Server Sedang Berjalan... ${process.env.MYSQLPORT}`);
+app.listen(process.env.APP_PORT, () => {
+  console.log(`Server Sedang Berjalan... ${process.env.APP_PORT}`);
 });
+// app.listen(process.env.PGPORT, () => {
+//   console.log(`Server Sedang Berjalan... ${process.env.PGPORT}`);
+// });

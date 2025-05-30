@@ -2,18 +2,24 @@ import { Sequelize } from "sequelize";
 import dotenv from "dotenv";
 dotenv.config();
 
-// const db = new Sequelize("tugasakhir", "root", "", {
-//   host: "localhost",
-//   dialect: "mysql",
-// });
-
-const db = new Sequelize({
+const db = new Sequelize("tugasakhir", "root", "", {
+  host: "localhost",
   dialect: "mysql",
-  host: process.env.MYSQLHOST,
-  port: process.env.MYSQLPORT,
-  username: process.env.MYSQLUSER,
-  password: process.env.MYSQLPASSWORD,
-  database: process.env.MYSQLDATABASE,
 });
+
+// const db = new Sequelize({
+//   dialect: "postgres",
+//   dialectOptions: {
+//     ssl: {
+//       require: true,
+//       rejectUnauthorized: false,
+//     },
+//   },
+//   host: process.env.PGHOST,
+//   port: process.env.PGPORT,
+//   username: process.env.PGUSER,
+//   password: process.env.PGPASSWORD,
+//   database: process.env.PGDATABASE,
+// });
 
 export default db;
