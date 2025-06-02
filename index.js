@@ -17,7 +17,11 @@ await db.authenticate();
 
 app.use(
   cors({
-    origin: ["http://localhost:5173", "https://tafe-pi.vercel.app"], // sesuaikan dengan origin frontend
+    origin: [
+      "http://localhost:5173",
+      "https://tafe-pi.vercel.app",
+      "https://vr68n1kf-5173.asse.devtunnels.ms",
+    ], // sesuaikan dengan origin frontend
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -26,7 +30,11 @@ app.use(
 app.options(
   "*",
   cors({
-    origin: ["http://localhost:5173", "https://tafe-pi.vercel.app,"],
+    origin: [
+      "http://localhost:5173",
+      "https://tafe-pi.vercel.app",
+      "https://vr68n1kf-5173.asse.devtunnels.ms",
+    ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
