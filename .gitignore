@@ -1,4 +1,4 @@
 /node_modules
-
+assets/attendances
 config.json
 models/index.js

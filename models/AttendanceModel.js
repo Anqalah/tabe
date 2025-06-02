@@ -35,7 +35,10 @@ const Attendances = db.define(
     facePhotoClockOut: {
       type: DataTypes.STRING,
     },
-    verificationConfidence: {
+    clockInConfidence: {
+      type: DataTypes.FLOAT,
+    },
+    clockOutConfidence: {
       type: DataTypes.FLOAT,
     },
   },

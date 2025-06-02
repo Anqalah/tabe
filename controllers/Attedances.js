@@ -2,7 +2,6 @@ import Attendances from "../models/AttendanceModel.js";
 import Students from "../models/StudentModel.js";
 import { Op } from "sequelize";
 
-
 export const getAttendances = async (req, res) => {
   try {
     const response = await Attendances.findAll({
@@ -219,7 +218,7 @@ export const createAttendance = async (req, res) => {
         date: today,
         locationClockIn: `${latitude},${longitude}`,
         facePhotoClockIn: photoUrl,
-        verificationConfidence: confidence,
+        clockInConfidence: confidence,
       });
 
       const createdAttendance = await Attendances.findOne({

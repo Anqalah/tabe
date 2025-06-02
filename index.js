@@ -41,9 +41,10 @@ app.use("/assets/attendances", express.static("assets/attendances"));
 app.use("/assets/profile_images", express.static("assets/profile_images"));
 app.use("/face_images", express.static("assets/face_images"));
 
-app.listen(process.env.APP_PORT, () => {
-  console.log(`Server Sedang Berjalan... ${process.env.APP_PORT}`);
-});
-// app.listen(process.env.PGPORT, () => {
-//   console.log(`Server Sedang Berjalan... ${process.env.PGPORT}`);
+// app.listen(process.env.APP_PORT, () => {
+//   console.log(`Server Sedang Berjalan... ${process.env.APP_PORT}`);
 // });
+
+app.listen(process.env.PGPORT, () => {
+  console.log(`Server Sedang Berjalan... ${process.env.PGPORT}`);
+});
