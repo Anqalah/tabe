@@ -183,9 +183,14 @@ export const registerComplete = [
         });
 
         // Kirim ke Flask
-        await axios.post("http://localhost:5000/save-reference", formData, {
-          headers: formData.getHeaders(),
-        });
+        await axios.post(
+          // "https://taml.onrender.com/save-reference",
+          "http://localhost:5000/save-reference",
+          formData,
+          {
+            headers: formData.getHeaders(),
+          }
+        );
         console.log("[REGISTRATION] Reference image saved to Flask");
       } catch (flaskError) {
         console.error(

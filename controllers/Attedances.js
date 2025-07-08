@@ -2,6 +2,67 @@ import Attendances from "../models/AttendanceModel.js";
 import Students from "../models/StudentModel.js";
 import { Op } from "sequelize";
 
+export const getHistoryAttendances = async (req, res) => {
+  try {
+    const student = await Students.findOne({
+      where: { uuid: req.params.id },
+    });
+    if (!student)
+      return res.status(404).json({ msg: "Siswa tidak ditemukan." });
+
+    // Get month and year from query params
+    const month = req.query.month ? parseInt(req.query.month) : null;
+    const year = req.query.year ? parseInt(req.query.year) : null;
+
+    /* ambil semua presensi si siswa pada bulan tsb */
+    const whereClause = { studentId: student.id };
+
+    if (month && year) {
+      whereClause[Op.and] = [
+        Sequelize.where(Sequelize.fn("MONTH", Sequelize.col("Date")), month),
+        Sequelize.where(Sequelize.fn("YEAR", Sequelize.col("Date")), year),
+      ];
+    }
+
+    const attendances = await Attendances.findAll({
+      where: whereClause,
+      order: [["Date", "ASC"]],
+      attributes: [
+        "uuid",
+        "ClockIn",
+        "ClockOut",
+        "Date",
+        "LocationClockIn",
+        "LocationClockOut",
+        "facePhotoClockIn",
+        "facePhotoClockOut",
+        "clockInConfidence",
+        "clockOutConfidence",
+      ],
+      include: [
+        {
+          model: Students,
+          attributes: [
+            "uuid",
+            "name",
+            "kelas",
+            "jk",
+            "hp",
+            "bidang",
+            "email",
+            "role",
+          ],
+        },
+      ],
+    });
+
+    res.status(200).json(attendances);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: err.message });
+  }
+};
+
 export const getAttendances = async (req, res) => {
   try {
     const response = await Attendances.findAll({
@@ -68,6 +129,8 @@ export const getAttendanceById = async (req, res) => {
         "LocationClockOut",
         "facePhotoClockIn",
         "facePhotoClockOut",
+        "clockInConfidence",
+        "clockOutConfidence",
       ],
       include: [
         {
@@ -178,12 +241,10 @@ export const checkAttendanceStatus = async (req, res) => {
 export const createAttendance = async (req, res) => {
   try {
     const { studentId, latitude, longitude, type, confidence } = req.body;
-
     if (!req.file) {
       return res.status(400).json({ msg: "Foto wajah wajib diunggah." });
     }
 
-    // Cari student berdasarkan UUID
     const student = await Students.findOne({ where: { uuid: studentId } });
     if (!student) {
       return res.status(404).json({ msg: "Siswa tidak ditemukan." });
@@ -191,8 +252,6 @@ export const createAttendance = async (req, res) => {
 
     const today = new Date().toISOString().split("T")[0];
     const internalStudentId = student.id;
-
-    // Cek apakah sudah ada absensi hari ini
     const existingAttendance = await Attendances.findOne({
       where: {
         studentId: internalStudentId,
@@ -204,7 +263,6 @@ export const createAttendance = async (req, res) => {
     const photoUrl = `${req.protocol}://${req.get(
       "host"
     )}/assets/attendances/${photoPath}`;
-
     if (type === "clockIn") {
       if (existingAttendance) {
         return res
@@ -225,7 +283,6 @@ export const createAttendance = async (req, res) => {
         where: { id: newAttendance.id },
         attributes: ["uuid"],
       });
-
       return res.status(201).json({
         msg: "Clock-in berhasil.",
         data: {
@@ -251,7 +308,8 @@ export const createAttendance = async (req, res) => {
       existingAttendance.clockOut = new Date();
       existingAttendance.locationClockOut = `${latitude},${longitude}`;
       existingAttendance.facePhotoClockOut = photoUrl;
-      await existingAttendance.save();
+      (existingAttendance.clockOutConfidence = confidence),
+        await existingAttendance.save();
 
       return res.status(200).json({
         msg: "Clock-out berhasil.",
