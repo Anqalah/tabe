@@ -83,8 +83,7 @@ export const Logout = (req, res) => {
 };
 
 export const registerInitial = async (req, res) => {
-  const { name, email, alamat, jk, umur, hp, bidang, kelas, password } =
-    req.body;
+  const { name, email, alamat, jk, hp, bidang, kelas, password } = req.body;
 
   if (!name || !email || !password)
     return res.status(400).json({ msg: "Semua field wajib diisi" });
@@ -100,12 +99,7 @@ export const registerInitial = async (req, res) => {
     const pendingUser = await PendingRegistration.create({
       name,
       email,
-      alamat,
-      jk,
-      umur,
       hp,
-      bidang,
-      kelas,
       password: hashPassword,
       verification_token: verificationToken,
       expires_at: expiresAt,

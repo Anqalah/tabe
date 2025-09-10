@@ -162,29 +162,6 @@ export const getAttendanceById = async (req, res) => {
   }
 };
 
-export const getFastestAttendance = async (req, res) => {
-  try {
-    const today = new Date().toISOString().split("T")[0];
-
-    const fastest = await Attendances.findOne({
-      where: {
-        date: today,
-      },
-      order: [["clockIn", "ASC"]],
-      include: [
-        {
-          model: Students,
-          attributes: ["name", "kelas"],
-        },
-      ],
-    });
-
-    res.status(200).json(fastest);
-  } catch (error) {
-    res.status(500).json({ msg: error.message });
-  }
-};
-
 export const checkAttendanceStatus = async (req, res) => {
   try {
     const { uuid } = req.params;
