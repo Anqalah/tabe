@@ -13,10 +13,6 @@ import StudentRoute from "./routes/StudentRoute.js";
 dotenv.config();
 
 const app = express();
-await db.authenticate();
-// await Attendances.drop();
-// await Attendances.sync({ force: true });
-// await Attendances.sync();
 
 app.use(
   cors({
@@ -35,6 +31,13 @@ app.options(
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
+await db.authenticate();
+// await Attendances.drop();
+// await Attendances.sync({ force: true });
+// await Attendances.sync();
+
+
 app.use(express.json());
 app.use(AuthRoute);
 app.use(AdminRoute);
