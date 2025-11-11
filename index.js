@@ -1,7 +1,10 @@
 import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
+import cron from "node-cron";
+import { Op } from "sequelize";
 import db from "./config/Database.js";
+import PendingRegistration from "./models/PendingRegistration.js";
 import AdminRoute from "./routes/AdminRoute.js";
 import AttendanceRoute from "./routes/AttendanceRoute.js";
 import AuthRoute from "./routes/AuthRoute.js";
@@ -17,11 +20,7 @@ await db.authenticate();
 
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "https://tafe-pi.vercel.app",
-      "https://vr68n1kf-5173.asse.devtunnels.ms",
-    ], // sesuaikan dengan origin frontend
+    origin: ["http://localhost:5173", "https://tafe-pi.vercel.app"], // sesuaikan dengan origin frontend
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -44,6 +43,25 @@ app.use(AttendanceRoute);
 app.use("/assets/attendances", express.static("assets/attendances"));
 app.use("/assets/profile_images", express.static("assets/profile_images"));
 app.use("/face_images", express.static("assets/face_images"));
+
+// 🕒 Cron job pembersihan PendingRegistration setiap 1 menit
+cron.schedule("* * * * *", async () => {
+  try {
+    const now = new Date();
+
+    const deleted = await PendingRegistration.destroy({
+      where: {
+        expires_at: { [Op.lt]: now },
+      },
+    });
+
+    if (deleted > 0) {
+      console.log(`🧹 ${deleted} data pending yang sudah kedaluwarsa dihapus`);
+    }
+  } catch (error) {
+    console.error("❌ Gagal menjalankan pembersihan otomatis:", error);
+  }
+});
 
 app.listen(process.env.APP_PORT, () => {
   console.log(`Server Sedang Berjalan... ${process.env.APP_PORT}`);
