@@ -62,11 +62,27 @@ export const Me = async (req, res) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     let user =
       (await Admins.findOne({
-        attributes: ["id", "uuid", "name", "email", "role", "foto_profile"],
+        attributes: [
+          "id",
+          "uuid",
+          "name",
+          "email",
+          "role",
+          "foto_profile",
+          "hp",
+        ],
         where: { uuid: decoded.uuid },
       })) ||
       (await Students.findOne({
-        attributes: ["id", "uuid", "name", "email", "role", "foto_profile"],
+        attributes: [
+          "id",
+          "uuid",
+          "name",
+          "email",
+          "role",
+          "foto_profile",
+          "hp",
+        ],
         where: { uuid: decoded.uuid },
       }));
     if (!user) return res.status(404).json({ msg: "User tidak ditemukan" });
@@ -155,48 +171,51 @@ export const registerComplete = [
         "host"
       )}/face_images/${path.basename(req.file.path)}`;
 
+      // Buat akun baru di DB
       const newStudent = await Students.create({
         ...pending.dataValues,
         face_image: faceImagePath,
         role: "Student",
       });
 
+      // Hapus pending registration
       await pending.destroy();
 
-      // KIRIM GAMBAR WAJAH KE FLASK HANYA SAAT REGISTRASI
+      // --- Kirim ke FastAPI untuk enroll wajah ---
       try {
-        // Baca file dari sistem
         const fileBuffer = await fs.promises.readFile(req.file.path);
 
-        // Buat FormData untuk dikirim ke Flask
         const formData = new FormData();
         formData.append("studentId", newStudent.uuid);
-        formData.append("image", fileBuffer, {
+        formData.append("file", fileBuffer, {
           filename: path.basename(req.file.path),
           contentType: req.file.mimetype,
         });
 
-        // Kirim ke Flask
-        await axios.post(
-          // "https://taml.onrender.com/save-reference",
-          "http://localhost:5000/save-reference",
+        const fastApiRes = await axios.post(
+          "http://localhost:5000/enroll",
           formData,
-          {
-            headers: formData.getHeaders(),
-          }
+          { headers: formData.getHeaders() }
         );
-        console.log("[REGISTRATION] Reference image saved to Flask");
-      } catch (flaskError) {
-        console.error(
-          "[REGISTRATION] Failed to save reference image to Flask:",
-          flaskError
-        );
+
+        console.log("[REGISTRATION] Enroll response:", fastApiRes.data);
+      } catch (err) {
+        console.error("[FASTAPI] Gagal mengirim ke /enroll:", err.message);
       }
 
+      // Hapus file lokal setelah selesai
+      try {
+        await fs.promises.unlink(req.file.path);
+      } catch (err) {
+        console.warn("Gagal hapus file lokal:", err.message);
+      }
+
+      // --- Kirim respons sukses ke frontend ---
       res.json({
         success: true,
         data: {
           id: newStudent.id,
+          uuid: newStudent.uuid,
           name: newStudent.name,
           email: newStudent.email,
           face_image: faceImagePath,

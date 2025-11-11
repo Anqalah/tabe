@@ -65,48 +65,71 @@ export const getStudentById = async (req, res) => {
 };
 
 export const updateStudent = async (req, res) => {
-  const user = await Students.findOne({
-    where: { uuid: req.params.id },
-  });
-  if (!user) return res.status(404).json({ msg: "User Tidak Ditemukan" });
-  const {
-    name,
-    jk,
-    umur,
-    alamat,
-    hp,
-    email,
-    password,
-    confPassword,
-  } = req.body;
-  let hashPassword;
-  if (password === "" || password === null) {
-    hashPassword = user.password;
-  } else {
-    hashPassword = await argon2.hash(password);
-  }
-  if (password !== confPassword)
-    return res
-      .status(400)
-      .json({ msg: "Password dan Confirm Password Harus Sama" });
   try {
+    const student = await Students.findOne({
+      where: { uuid: req.params.id },
+    });
+    if (!student) return res.status(404).json({ msg: "User Tidak Ditemukan" });
+
+    if (req.role !== "Admin" && req.uuid !== student.uuid) {
+      return res.status(403).json({ msg: "Akses ditolak" });
+    }
+
+    const { name, jk, umur, alamat, hp, email, password, confPassword } =
+      req.body;
+
+    if (password && password !== confPassword) {
+      return res
+        .status(400)
+        .json({ msg: "Password dan Konfirmasi Password harus sama" });
+    }
+
+    let hashPassword = student.password;
+    if (password && password !== "") {
+      hashPassword = await argon2.hash(password);
+    }
+
+    let fotoPath = student.foto_profile;
+    if (req.file) {
+      const fileName = req.file.filename;
+      const fileDir = "assets/profile_images";
+      const fullPath = path.join(fileDir, fileName);
+
+      if (student.foto_profile) {
+        const oldPath = path.resolve(
+          student.foto_profile.replace(
+            `${req.protocol}://${req.get("host")}/`,
+            ""
+          )
+        );
+        if (fs.existsSync(oldPath)) {
+          fs.unlinkSync(oldPath);
+        }
+      }
+      fotoPath = `${req.protocol}://${req.get("host")}/${fullPath}`;
+    }
+
     await Students.update(
       {
-        name: name,
-        jk: jk,
-        umur: umur,
-        alamat: alamat,
-        hp: hp,
-        email: email,
+        name,
+        jk,
+        umur,
+        alamat,
+        hp,
+        email,
         password: hashPassword,
+        foto_profile: fotoPath,
       },
-      {
-        where: { id: user.id },
-      }
+      { where: { id: student.id } }
     );
-    res.status(200).json({ msg: "User Updated" });
+
+    return res.status(200).json({
+      msg: "Profil berhasil diperbarui",
+      foto_profile: fotoPath,
+    });
   } catch (error) {
-    res.status(400).json({ msg: error.message });
+    console.error("Update student error:", error);
+    return res.status(400).json({ msg: error.message });
   }
 };
 

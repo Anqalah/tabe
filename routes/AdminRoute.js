@@ -16,4 +16,4 @@ router.post("/admins", verifyUser, adminOnly, createAdmin);
 router.patch("/admins/:id", verifyUser, adminOnly, profileUpload, updateAdmin);
 router.delete("/admins/:id", verifyUser, adminOnly, deleteAdmin);
 
-export default router;
+export default router;      

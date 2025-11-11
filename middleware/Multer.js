@@ -80,14 +80,14 @@ const attendanceStorage = multer.diskStorage({
   },
 });
 
+// ✅ Versi benar dari fileFilter (sinkron)
 const checkFileDuplicate = (req, file, cb) => {
   const filePath = path.join("assets/attendances", file.originalname);
-  fs.access(filePath, fs.constants.F_OK, (err) => {
-    cb(
-      err ? null : new Error("File sudah ada, gunakan nama berbeda."),
-      err ? true : false
-    );
-  });
+  if (fs.existsSync(filePath)) {
+    cb(new Error("File sudah ada, gunakan nama berbeda."), false);
+  } else {
+    cb(null, true);
+  }
 };
 
 export const attendanceUpload = multer({
