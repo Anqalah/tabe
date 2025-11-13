@@ -37,7 +37,6 @@ await db.authenticate();
 // await Attendances.sync({ force: true });
 // await Attendances.sync();
 
-
 app.use(express.json());
 app.use(AuthRoute);
 app.use(AdminRoute);
@@ -48,7 +47,7 @@ app.use("/assets/profile_images", express.static("assets/profile_images"));
 app.use("/face_images", express.static("assets/face_images"));
 
 // 🕒 Cron job pembersihan PendingRegistration setiap 1 menit
-cron.schedule("* * * * *", async () => {
+cron.schedule("0 * * * *", async () => {
   try {
     const now = new Date();
 
