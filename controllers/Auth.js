@@ -182,10 +182,12 @@ export const registerComplete = [
       await pending.destroy();
 
       // --- Kirim ke FastAPI untuk enroll wajah ---
+      let embeddingResult = null;
       try {
         const fileBuffer = await fs.promises.readFile(req.file.path);
 
         const formData = new FormData();
+        // ⚠️ PENTING: gunakan uuid sebagai studentId konsisten di semua layanan
         formData.append("studentId", newStudent.uuid);
         formData.append("file", fileBuffer, {
           filename: path.basename(req.file.path),
@@ -199,6 +201,7 @@ export const registerComplete = [
         );
 
         console.log("[REGISTRATION] Enroll response:", fastApiRes.data);
+        embeddingResult = fastApiRes.data;
       } catch (err) {
         console.error("[FASTAPI] Gagal mengirim ke /enroll:", err.message);
       }
@@ -210,7 +213,7 @@ export const registerComplete = [
         console.warn("Gagal hapus file lokal:", err.message);
       }
 
-      // --- Kirim respons sukses ke frontend ---
+      // --- Kirim respons sukses ke frontend + embeddingResult ---
       res.json({
         success: true,
         data: {
@@ -220,6 +223,7 @@ export const registerComplete = [
           email: newStudent.email,
           face_image: faceImagePath,
         },
+        embeddingResult, // 👉 ini yang nanti dibaca React
       });
     } catch (error) {
       if (req.file) fs.unlinkSync(req.file.path);

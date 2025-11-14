@@ -133,6 +133,79 @@ export const updateStudent = async (req, res) => {
   }
 };
 
+// controllers/StudentController.js
+
+import fs from "fs";
+import path from "path";
+import { Students } from "../models/StudentModel.js";
+import faceUpload from "../middleware/faceUpload.js"; // sama seperti registerComplete
+
+export const updateStudentFace = [
+  faceUpload.single("face_image"), // ⬅️ field name dari frontend
+  async (req, res) => {
+    try {
+      // pakai uuid di params seperti updateStudent
+      const student = await Students.findOne({
+        where: { uuid: req.params.id },
+      });
+
+      if (!student)
+        return res.status(404).json({ msg: "User Tidak Ditemukan" });
+
+      // cek otorisasi: admin atau pemilik akun
+      if (req.role !== "Admin" && req.uuid !== student.uuid) {
+        return res.status(403).json({ msg: "Akses ditolak" });
+      }
+
+      if (!req.file) {
+        return res
+          .status(400)
+          .json({ msg: "File wajah (face_image) wajib diunggah" });
+      }
+
+      // === Hapus face_image lama kalau ada ===
+      let faceImagePath = student.face_image;
+      if (student.face_image) {
+        try {
+          const oldPath = path.resolve(
+            student.face_image.replace(
+              `${req.protocol}://${req.get("host")}/`,
+              ""
+            )
+          );
+          if (fs.existsSync(oldPath)) {
+            fs.unlinkSync(oldPath);
+            console.log("🗑️ Face image lama dihapus:", oldPath);
+          }
+        } catch (err) {
+          console.warn("Gagal menghapus face image lama:", err.message);
+        }
+      }
+
+      // === Simpan face_image baru (pakai pola seperti registerComplete) ===
+      const fileName = req.file.filename;
+      // sesuaikan dengan konfigurasi multer faceUpload kamu (misal: "face_images" atau "public/face_images")
+      const fileDir = "face_images";
+      const fullPath = path.join(fileDir, fileName);
+      faceImagePath = `${req.protocol}://${req.get("host")}/${fullPath}`;
+
+      // update hanya kolom face_image
+      await Students.update(
+        { face_image: faceImagePath },
+        { where: { id: student.id } }
+      );
+
+      return res.status(200).json({
+        msg: "Wajah berhasil diperbarui",
+        face_image: faceImagePath,
+      });
+    } catch (error) {
+      console.error("Update student face error:", error);
+      return res.status(400).json({ msg: error.message });
+    }
+  },
+];
+
 export const deleteStudent = async (req, res) => {
   const user = await Students.findOne({
     where: { uuid: req.params.id },

@@ -24,8 +24,6 @@ const Students = db.define(
     umur: DataTypes.STRING,
     alamat: DataTypes.STRING,
     hp: DataTypes.STRING,
-    bidang: DataTypes.STRING,
-    kelas: DataTypes.STRING,
     email: {
       type: DataTypes.STRING,
       allowNull: false,

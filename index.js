@@ -44,7 +44,10 @@ app.use(StudentRoute);
 app.use(AttendanceRoute);
 app.use("/assets/attendances", express.static("assets/attendances"));
 app.use("/assets/profile_images", express.static("assets/profile_images"));
-app.use("/face_images", express.static("assets/face_images"));
+app.use(
+  "/face_images",
+  express.static(path.join(process.cwd(), "face_images"))
+);
 
 // 🕒 Cron job pembersihan PendingRegistration setiap 1 menit
 cron.schedule("0 * * * *", async () => {

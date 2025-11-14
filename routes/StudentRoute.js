@@ -4,6 +4,7 @@ import {
   getStudentById,
   updateStudent,
   deleteStudent,
+  updateStudentFace,
 } from "../controllers/Students.js";
 import { adminOnly, verifyUser } from "../middleware/AuthUser.js";
 import { profileUpload } from "../middleware/Multer.js";
@@ -16,7 +17,8 @@ router.patch(
   verifyUser,
   adminOnly,
   profileUpload,
-  updateStudent
+  updateStudent,
+  updateStudentFace
 );
 router.delete("/students/:id", verifyUser, adminOnly, deleteStudent);
 
