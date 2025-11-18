@@ -12,11 +12,9 @@ export const getStudents = async (req, res) => {
         "role",
         "email",
         "name",
-        "kelas",
         "umur",
         "alamat",
         "hp",
-        "bidang",
         "jk",
         "foto_profile",
         "face_image",
@@ -48,13 +46,12 @@ export const getStudentById = async (req, res) => {
       attributes: [
         "uuid",
         "name",
-        "kelas",
         "jk",
         "hp",
-        "bidang",
         "email",
         "role",
         "foto_profile",
+        "face_image",
       ],
       where: { uuid: req.params.id },
     });
@@ -66,145 +63,127 @@ export const getStudentById = async (req, res) => {
 
 export const updateStudent = async (req, res) => {
   try {
+    // 1. Ambil student berdasarkan UUID di params
     const student = await Students.findOne({
       where: { uuid: req.params.id },
     });
-    if (!student) return res.status(404).json({ msg: "User Tidak Ditemukan" });
 
+    if (!student) {
+      return res.status(404).json({ msg: "User Tidak Ditemukan" });
+    }
+
+    // 2. Cek otorisasi
     if (req.role !== "Admin" && req.uuid !== student.uuid) {
       return res.status(403).json({ msg: "Akses ditolak" });
     }
 
+    // 3. Ambil body
     const { name, jk, umur, alamat, hp, email, password, confPassword } =
       req.body;
 
+    // 4. Validasi password jika mau diubah
     if (password && password !== confPassword) {
-      return res
-        .status(400)
-        .json({ msg: "Password dan Konfirmasi Password harus sama" });
+      return res.status(400).json({
+        msg: "Password dan Konfirmasi Password harus sama",
+      });
     }
 
-    let hashPassword = student.password;
-    if (password && password !== "") {
-      hashPassword = await argon2.hash(password);
+    // 5. Susun objek updateData (hanya field yang dikirim)
+    const updateData = {};
+
+    if (typeof name !== "undefined") updateData.name = name;
+    if (typeof jk !== "undefined") updateData.jk = jk;
+    if (typeof umur !== "undefined") updateData.umur = umur;
+    if (typeof alamat !== "undefined") updateData.alamat = alamat;
+    if (typeof hp !== "undefined") updateData.hp = hp;
+    if (typeof email !== "undefined") updateData.email = email;
+
+    // 6. Hash password hanya jika benar-benar diisi
+    if (password && password.trim() !== "") {
+      const hashPassword = await argon2.hash(password.trim());
+      updateData.password = hashPassword;
     }
 
-    let fotoPath = student.foto_profile;
-    if (req.file) {
-      const fileName = req.file.filename;
-      const fileDir = "assets/profile_images";
-      const fullPath = path.join(fileDir, fileName);
-
-      if (student.foto_profile) {
-        const oldPath = path.resolve(
-          student.foto_profile.replace(
-            `${req.protocol}://${req.get("host")}/`,
-            ""
-          )
+    // Helper: hapus file lama dari disk
+    const deleteFileByUrl = (url) => {
+      if (!url) return;
+      try {
+        const relativePath = url.replace(
+          `${req.protocol}://${req.get("host")}/`,
+          ""
         );
-        if (fs.existsSync(oldPath)) {
-          fs.unlinkSync(oldPath);
+        const absPath = path.resolve(relativePath);
+        if (fs.existsSync(absPath)) {
+          fs.unlinkSync(absPath);
         }
+      } catch (e) {
+        console.warn("Gagal menghapus file lama:", e.message);
       }
-      fotoPath = `${req.protocol}://${req.get("host")}/${fullPath}`;
+    };
+
+    // Helper: buat URL file baru
+    const saveFileAndGetUrl = (file, subdir) => {
+      const fileDir = path.join("assets", subdir); // contoh: assets/profile_images
+      const dirPath = path.resolve(fileDir);
+      if (!fs.existsSync(dirPath)) {
+        fs.mkdirSync(dirPath, { recursive: true });
+      }
+      const fullPath = path.join(fileDir, file.filename);
+      return `${req.protocol}://${req.get("host")}/${fullPath}`;
+    };
+
+    // a) foto_profile (foto profil biasa)
+    let newFotoProfileUrl = null;
+    const profileFile =
+      req.files?.foto_profile?.[0] ||
+      (req.file && req.file.fieldname === "foto_profile" ? req.file : null);
+
+    if (profileFile) {
+      // hapus foto_profile lama jika ada
+      if (student.foto_profile) {
+        deleteFileByUrl(student.foto_profile);
+      }
+      newFotoProfileUrl = saveFileAndGetUrl(profileFile, "profile_images");
+      updateData.foto_profile = newFotoProfileUrl;
     }
 
-    await Students.update(
-      {
-        name,
-        jk,
-        umur,
-        alamat,
-        hp,
-        email,
-        password: hashPassword,
-        foto_profile: fotoPath,
-      },
-      { where: { id: student.id } }
-    );
+    // b) face_image (foto untuk face recognition)
+    let newFaceImageUrl = null;
+    const faceFile =
+      req.files?.face_image?.[0] ||
+      (req.file && req.file.fieldname === "face_image" ? req.file : null);
+
+    if (faceFile) {
+      // hapus face_image lama jika ada
+      if (student.face_image) {
+        deleteFileByUrl(student.face_image);
+      }
+      newFaceImageUrl = saveFileAndGetUrl(faceFile, "face_images");
+      updateData.face_image = newFaceImageUrl;
+    }
+
+    // 8. Kalau tidak ada data yang berubah, jangan paksa update
+    if (Object.keys(updateData).length === 0) {
+      return res.status(200).json({
+        msg: "Tidak ada data yang diubah",
+        foto_profile: student.foto_profile,
+        face_image: student.face_image,
+      });
+    }
+
+    // 9. Lakukan update
+    await Students.update(updateData, { where: { id: student.id } });
 
     return res.status(200).json({
       msg: "Profil berhasil diperbarui",
-      foto_profile: fotoPath,
+      foto_profile: newFotoProfileUrl || student.foto_profile,
+      face_image: newFaceImageUrl || student.face_image,
     });
   } catch (error) {
     console.error("Update student error:", error);
-    return res.status(400).json({ msg: error.message });
+    return res.status(500).json({ msg: "Terjadi kesalahan server" });
   }
 };
-
-// controllers/StudentController.js
-
-import fs from "fs";
-import path from "path";
-import { Students } from "../models/StudentModel.js";
-import faceUpload from "../middleware/faceUpload.js"; // sama seperti registerComplete
-
-export const updateStudentFace = [
-  faceUpload.single("face_image"), // ⬅️ field name dari frontend
-  async (req, res) => {
-    try {
-      // pakai uuid di params seperti updateStudent
-      const student = await Students.findOne({
-        where: { uuid: req.params.id },
-      });
-
-      if (!student)
-        return res.status(404).json({ msg: "User Tidak Ditemukan" });
-
-      // cek otorisasi: admin atau pemilik akun
-      if (req.role !== "Admin" && req.uuid !== student.uuid) {
-        return res.status(403).json({ msg: "Akses ditolak" });
-      }
-
-      if (!req.file) {
-        return res
-          .status(400)
-          .json({ msg: "File wajah (face_image) wajib diunggah" });
-      }
-
-      // === Hapus face_image lama kalau ada ===
-      let faceImagePath = student.face_image;
-      if (student.face_image) {
-        try {
-          const oldPath = path.resolve(
-            student.face_image.replace(
-              `${req.protocol}://${req.get("host")}/`,
-              ""
-            )
-          );
-          if (fs.existsSync(oldPath)) {
-            fs.unlinkSync(oldPath);
-            console.log("🗑️ Face image lama dihapus:", oldPath);
-          }
-        } catch (err) {
-          console.warn("Gagal menghapus face image lama:", err.message);
-        }
-      }
-
-      // === Simpan face_image baru (pakai pola seperti registerComplete) ===
-      const fileName = req.file.filename;
-      // sesuaikan dengan konfigurasi multer faceUpload kamu (misal: "face_images" atau "public/face_images")
-      const fileDir = "face_images";
-      const fullPath = path.join(fileDir, fileName);
-      faceImagePath = `${req.protocol}://${req.get("host")}/${fullPath}`;
-
-      // update hanya kolom face_image
-      await Students.update(
-        { face_image: faceImagePath },
-        { where: { id: student.id } }
-      );
-
-      return res.status(200).json({
-        msg: "Wajah berhasil diperbarui",
-        face_image: faceImagePath,
-      });
-    } catch (error) {
-      console.error("Update student face error:", error);
-      return res.status(400).json({ msg: error.message });
-    }
-  },
-];
 
 export const deleteStudent = async (req, res) => {
   const user = await Students.findOne({

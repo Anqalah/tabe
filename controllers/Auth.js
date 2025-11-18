@@ -82,6 +82,7 @@ export const Me = async (req, res) => {
           "role",
           "foto_profile",
           "hp",
+          "face_image",
         ],
         where: { uuid: decoded.uuid },
       }));
@@ -167,14 +168,16 @@ export const registerComplete = [
           .json({ error: "Token tidak valid atau sudah kedaluwarsa" });
       }
 
-      const faceImagePath = `${req.protocol}://${req.get(
-        "host"
-      )}/face_images/${path.basename(req.file.path)}`;
+      // selalu simpan PATH RELATIF
+      const relativePath = `assets/face_images/${path.basename(req.file.path)}`;
+
+      // normalisasi Windows backslash → slash
+      const normalizedPath = relativePath.replace(/\\/g, "/");
 
       // Buat akun baru di DB
       const newStudent = await Students.create({
         ...pending.dataValues,
-        face_image: faceImagePath,
+        face_image: normalizedPath,
         role: "Student",
       });
 
