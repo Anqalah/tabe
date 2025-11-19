@@ -80,16 +80,7 @@ export const getAttendances = async (req, res) => {
       include: [
         {
           model: Students,
-          attributes: [
-            "uuid",
-            "name",
-            "kelas",
-            "jk",
-            "hp",
-            "bidang",
-            "email",
-            "role",
-          ],
+          attributes: ["uuid", "name", "kelas", "jk", "hp", "email", "role"],
         },
       ],
     });
@@ -135,16 +126,7 @@ export const getAttendanceById = async (req, res) => {
       include: [
         {
           model: Students,
-          attributes: [
-            "uuid",
-            "name",
-            "kelas",
-            "jk",
-            "hp",
-            "bidang",
-            "email",
-            "role",
-          ],
+          attributes: ["uuid", "name", "kelas", "jk", "hp", "email", "role"],
         },
       ],
       order: [["Date", "DESC"]], // Urutkan berdasarkan tanggal terbaru

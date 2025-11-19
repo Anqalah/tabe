@@ -81,6 +81,7 @@ export const Me = async (req, res) => {
           "email",
           "role",
           "foto_profile",
+
           "hp",
           "face_image",
         ],
