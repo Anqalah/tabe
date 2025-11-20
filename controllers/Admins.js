@@ -27,22 +27,30 @@ export const getAdminById = async (req, res) => {
 
 export const createAdmin = async (req, res) => {
   const { name, email, password, confPassword, hp } = req.body;
-  if (password !== confPassword)
-    return res
-      .status(400)
-      .json({ msg: "Password dan Confirm Password Harus Sama" });
-  const hashPassword = await argon2.hash(password);
+
+  if (password !== confPassword) {
+    return res.status(400).json({
+      message: "Password dan konfirmasi password tidak sama",
+    });
+  }
+
+  const photoPath = req.file ? `/profile_images/${req.file.filename}` : null;
+
   try {
+    const hashPassword = await argon2.hash(password);
+
     await Admins.create({
-      name: name,
-      email: email,
-      hp: hp,
+      name,
+      email,
+      hp,
       password: hashPassword,
       role: "Admin",
+      foto_profile: photoPath,
     });
-    res.status(201).json({ msg: "Register Berhasil" });
+
+    res.status(201).json({ message: "Admin berhasil didaftarkan" });
   } catch (error) {
-    res.status(400).json({ msg: error.message });
+    res.status(400).json({ message: error.message });
   }
 };
 

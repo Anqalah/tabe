@@ -2,7 +2,7 @@ import argon2 from "argon2";
 import Admins from "../models/AdminModel.js";
 import Students from "../models/StudentModel.js";
 import PendingRegistration from "../models/PendingRegistration.js";
-import { faceUpload } from "../middleware/Multer.js";
+import { studentUpload } from "../middleware/Multer.js";
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
@@ -134,112 +134,84 @@ export const registerInitial = async (req, res) => {
   }
 };
 
-// Register Tahap Akhir dengan upload wajah
-export const registerComplete = [
-  faceUpload.single("face_image"),
-  async (req, res) => {
-    try {
-      const { verification_token } = req.body;
+export const registerComplete = async (req, res) => {
+  try {
+    const { verification_token } = req.body;
 
-      if (!verification_token || !req.file) {
-        if (req.file) {
-          try {
-            await fs.promises.unlink(req.file.path);
-          } catch (err) {
-            console.error("Gagal menghapus file:", err);
-          }
-        }
-        return res.status(400).json({ error: "Data tidak lengkap" });
-      }
+    // file dari multer.fields()
+    const faceFile = req.files?.face_image?.[0];
 
-      const pending = await PendingRegistration.findOne({
-        where: { verification_token },
-      });
-
-      if (!pending || new Date() > pending.expires_at) {
-        if (req.file) {
-          try {
-            await fs.promises.unlink(req.file.path);
-          } catch (err) {
-            console.error("Gagal menghapus file:", err);
-          }
-        }
-        return res
-          .status(400)
-          .json({ error: "Token tidak valid atau sudah kedaluwarsa" });
-      }
-
-      // selalu simpan PATH RELATIF
-      const relativePath = `assets/face_images/${path.basename(req.file.path)}`;
-
-      // normalisasi Windows backslash → slash
-      const normalizedPath = relativePath.replace(/\\/g, "/");
-
-      // Buat akun baru di DB
-      const newStudent = await Students.create({
-        ...pending.dataValues,
-        face_image: normalizedPath,
-        role: "Student",
-      });
-
-      // Hapus pending registration
-      await pending.destroy();
-
-      // --- Kirim ke FastAPI untuk enroll wajah ---
-      let embeddingResult = null;
-      try {
-        const fileBuffer = await fs.promises.readFile(req.file.path);
-
-        const formData = new FormData();
-        // ⚠️ PENTING: gunakan uuid sebagai studentId konsisten di semua layanan
-        formData.append("studentId", newStudent.uuid);
-        formData.append("file", fileBuffer, {
-          filename: path.basename(req.file.path),
-          contentType: req.file.mimetype,
-        });
-
-        const fastApiRes = await axios.post(
-          "http://localhost:5000/enroll",
-          formData,
-          { headers: formData.getHeaders() }
-        );
-
-        console.log("[REGISTRATION] Enroll response:", fastApiRes.data);
-        embeddingResult = fastApiRes.data;
-      } catch (err) {
-        console.error("[FASTAPI] Gagal mengirim ke /enroll:", err.message);
-      }
-
-      // Hapus file lokal setelah selesai
-      try {
-        await fs.promises.unlink(req.file.path);
-      } catch (err) {
-        console.warn("Gagal hapus file lokal:", err.message);
-      }
-
-      // --- Kirim respons sukses ke frontend + embeddingResult ---
-      res.json({
-        success: true,
-        data: {
-          id: newStudent.id,
-          uuid: newStudent.uuid,
-          name: newStudent.name,
-          email: newStudent.email,
-          face_image: faceImagePath,
-        },
-        embeddingResult, // 👉 ini yang nanti dibaca React
-      });
-    } catch (error) {
-      if (req.file) fs.unlinkSync(req.file.path);
-      console.error("Register complete error:", error);
-      res.status(500).json({
-        error: "Gagal menyelesaikan registrasi",
-        detail:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
-      });
+    if (!verification_token || !faceFile) {
+      return res.status(400).json({ error: "Data tidak lengkap" });
     }
-  },
-];
+
+    const pending = await PendingRegistration.findOne({
+      where: { verification_token },
+    });
+
+    if (!pending || new Date() > pending.expires_at) {
+      return res
+        .status(400)
+        .json({ error: "Token tidak valid atau sudah kedaluwarsa" });
+    }
+
+    // path relatif
+    const relativePath = `assets/face_images/${faceFile.filename}`;
+    const normalizedPath = relativePath.replace(/\\/g, "/");
+
+    // buat user
+    const newStudent = await Students.create({
+      ...pending.dataValues,
+      face_image: normalizedPath,
+      role: "Student",
+    });
+
+    await pending.destroy();
+
+    // kirim ke FastAPI
+    let embeddingResult = null;
+    try {
+      const fileBuffer = await fs.promises.readFile(faceFile.path);
+
+      const formData = new FormData();
+      formData.append("studentId", newStudent.uuid);
+      formData.append("file", fileBuffer, {
+        filename: faceFile.filename,
+        contentType: faceFile.mimetype,
+      });
+
+      const fastApiRes = await axios.post(
+        "http://localhost:5000/enroll",
+        formData,
+        { headers: formData.getHeaders() }
+      );
+
+      embeddingResult = fastApiRes.data;
+    } catch (err) {
+      console.error("[FASTAPI] Enroll failed:", err.message);
+    }
+
+    // hapus file sementara
+    try {
+      await fs.promises.unlink(faceFile.path);
+    } catch {}
+
+    res.json({
+      success: true,
+      data: {
+        id: newStudent.id,
+        uuid: newStudent.uuid,
+        name: newStudent.name,
+        email: newStudent.email,
+        face_image: normalizedPath,
+      },
+      embeddingResult,
+    });
+  } catch (error) {
+    console.error("Register complete error:", error);
+    res.status(500).json({ error: "Gagal menyelesaikan registrasi" });
+  }
+};
 
 export const deleteRegister = async (req, res) => {
   try {
